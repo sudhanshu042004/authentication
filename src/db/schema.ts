@@ -3,7 +3,7 @@ import * as t from "drizzle-orm/pg-core";
 export const users = t.pgTable("users", {
     id: t.integer('id').primaryKey().generatedAlwaysAsIdentity(),
     email: t.text('email').unique(),
-    name: t.text('name'),
+    name: t.text('name').notNull(),
     avatar: t.text('avatar'),
     isVerified: t.boolean('is_verified').default(false),
     role: t.text('role').default('user'),
