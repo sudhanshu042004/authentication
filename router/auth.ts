@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { LoginBody, SignUpBody } from "../types/ZodSchema";
+import { LoginBody, SignUpBody } from "../utils/ZodSchema";
 import { db } from "../src/db";
 import { userProviders, users } from "../src/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -84,7 +84,14 @@ auth.post('/login',async (req:Request,res:Response)=>{
         }
 
         const user = await db.select().from(users).where(eq(users.email,data.email));
-        res.status(200).json({'status' : "statusOk",'message' : "successfully login", 'data' : user[0]});
+
+        if(!user[0]){
+            throw new Error("couldn't get users data");
+        }
+
+        const token = tokenGen({userId: user[0].id ,email : data.email});
+        res.cookie('session',token);
+        res.status(200).json({'status' : "statusOk",'message' : "successfully login",'cookie' : token});
         return;
         
     } catch (error) {
