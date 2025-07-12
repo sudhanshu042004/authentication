@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 
 const secret = process.env.JWT_SECRET;
 
@@ -14,9 +14,9 @@ export function verifyToken(tokenString : string){
     if(!secret){
         throw new Error("No jwt secret found");
     }
-    const isVerified = jwt.verify(tokenString,secret);
-    if(!isVerified){
-        return false;
+    const JwtPayload = jwt.verify(tokenString,secret) as JwtPayload;
+    if(!JwtPayload){
+        return null;
     }
-    return true;
+    return JwtPayload;
 }
