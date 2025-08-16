@@ -1,0 +1,495 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Auth API",
+    "description": "A secure authentication API with JWT tokens, Google OAuth, and PostgreSQL database.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support",
+      "email": "support@example.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.example.com",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication endpoints"
+    },
+    {
+      "name": "Google OAuth",
+      "description": "Google OAuth integration"
+    },
+    {
+      "name": "User Management",
+      "description": "User profile management"
+    },
+    {
+      "name": "Health",
+      "description": "Health check endpoints"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "description": "Simple health check endpoint to verify the server is running",
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "you have pinged the server"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "you have pinged the server"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/signup": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "User registration",
+        "description": "Create a new user account with email and password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password", "name"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 16,
+                    "example": "securepassword123"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success"]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "cookie": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "status": "success",
+                  "message": "user created successfully",
+                  "cookie": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "error",
+                  "message": "Invalid Credentials"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Email already exists",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "error",
+                  "message": "Email already exists"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "User login",
+        "description": "Authenticate user with email and password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 16,
+                    "example": "securepassword123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "statusOk",
+                  "message": "successfully login",
+                  "cookie": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "error",
+                  "message": "Invalid Credentials"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "error",
+                  "message": "Invalid password"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "error",
+                  "message": "email doesn't exists"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/google/token": {
+      "post": {
+        "tags": ["Google OAuth"],
+        "summary": "Google OAuth authentication",
+        "description": "Authenticate user with Google OAuth access token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["access_token"],
+                "properties": {
+                  "access_token": {
+                    "type": "string",
+                    "description": "Google OAuth access token",
+                    "example": "ya29.a0AfH6SMC..."
+                  },
+                  "id_token": {
+                    "type": "string",
+                    "description": "Google ID token (optional)",
+                    "example": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjE..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "success",
+                  "user": {
+                    "id": "123456789",
+                    "email": "user@gmail.com",
+                    "name": "John Doe",
+                    "picture": "https://lh3.googleusercontent.com/a/...",
+                    "given_name": "John",
+                    "family_name": "Doe",
+                    "email_verified": "true",
+                    "provider": "google"
+                  },
+                  "message": "Authentication successful"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing access token",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "error",
+                  "message": "Access token is missing"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Authentication failed",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "error",
+                  "message": "Failed to authenticate with Google"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/google/logout": {
+      "post": {
+        "tags": ["Google OAuth"],
+        "summary": "Logout user",
+        "description": "Clear authentication cookies and logout user",
+        "responses": {
+          "200": {
+            "description": "Logout successful",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "success",
+                  "message": "Logged out successfully"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user": {
+      "get": {
+        "tags": ["User Management"],
+        "summary": "Get user profile",
+        "description": "Retrieve current user's profile information",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "statusOk",
+                  "message": "users data for user@example.com",
+                  "data": {
+                    "id": 1,
+                    "email": "user@example.com",
+                    "name": "John Doe",
+                    "avatar": "https://example.com/avatar.jpg",
+                    "isVerified": false,
+                    "role": "user",
+                    "createdAt": "2024-01-01T00:00:00.000Z",
+                    "updatedAt": "2024-01-01T00:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "error",
+                  "message": "invalid token"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["User Management"],
+        "summary": "Update user profile",
+        "description": "Update current user's profile information",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "Jane Doe"
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "format": "uri",
+                    "example": "https://example.com/new-avatar.jpg"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "statusOk",
+                  "message": "successfully updated user profile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "error",
+                  "message": "invalid input"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "error",
+                  "message": "invalid token"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["User Management"],
+        "summary": "Delete user account",
+        "description": "Permanently delete the current user's account",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User account deleted successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "statusOK",
+                  "message": "user of id 1 deleted successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "error",
+                  "message": "unauthorize access"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session",
+        "description": "JWT token stored in HTTP-only cookie"
+      },
+      "authToken": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "auth_token",
+        "description": "JWT token for Google OAuth authentication"
+      }
+    }
+  }
+} 

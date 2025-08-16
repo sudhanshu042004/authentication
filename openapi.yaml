@@ -1,0 +1,708 @@
+openapi: 3.0.3
+info:
+  title: Auth API
+  description: |
+    A secure authentication API with JWT tokens, Google OAuth, and PostgreSQL database.
+    
+    ## Features
+    - JWT-based authentication
+    - Google OAuth integration
+    - User management
+    - Rate limiting and security headers
+    
+    ## Security
+    - Rate limiting (5 auth attempts per 15 minutes)
+    - JWT tokens with 7-day expiration
+    - HTTP-only cookies
+    - Input validation with Zod schemas
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication endpoints
+  - name: Google OAuth
+    description: Google OAuth integration
+  - name: User Management
+    description: User profile management
+  - name: Health
+    description: Health check endpoints
+
+paths:
+  /:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Simple health check endpoint to verify the server is running
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "you have pinged the server"
+              example:
+                message: "you have pinged the server"
+
+  /api/auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: User registration
+      description: Create a new user account with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+            example:
+              email: "user@example.com"
+              password: "securepassword123"
+              name: "John Doe"
+      responses:
+        '200':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+              example:
+                status: "success"
+                message: "user created successfully"
+                cookie: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Invalid Credentials"
+        '401':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Email already exists"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "something went wrong!!!"
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: "user@example.com"
+              password: "securepassword123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+              example:
+                status: "statusOk"
+                message: "successfully login"
+                cookie: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Invalid Credentials"
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Invalid password"
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "email doesn't exists"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "something went wrong!!!"
+
+  /api/auth/google/token:
+    post:
+      tags:
+        - Google OAuth
+      summary: Google OAuth authentication
+      description: Authenticate user with Google OAuth access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+            example:
+              access_token: "ya29.a0AfH6SMC..."
+              id_token: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjE..."
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoogleAuthResponse'
+              example:
+                status: "success"
+                user:
+                  id: "123456789"
+                  email: "user@gmail.com"
+                  name: "John Doe"
+                  picture: "https://lh3.googleusercontent.com/a/..."
+                  given_name: "John"
+                  family_name: "Doe"
+                  email_verified: "true"
+                  provider: "google"
+                message: "Authentication successful"
+        '400':
+          description: Missing access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Access token is missing"
+        '500':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Failed to authenticate with Google"
+
+  /api/auth/google/logout:
+    post:
+      tags:
+        - Google OAuth
+      summary: Logout user
+      description: Clear authentication cookies and logout user
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                status: "success"
+                message: "Logged out successfully"
+        '500':
+          description: Logout failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Failed to logout"
+
+  /api/auth/google/me:
+    get:
+      tags:
+        - Google OAuth
+      summary: Get current user
+      description: Get current user information from JWT token
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: User information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfoResponse'
+              example:
+                status: "success"
+                user:
+                  id: "123456789"
+                  email: "user@gmail.com"
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Not authenticated"
+
+  /api/auth/google/refresh:
+    post:
+      tags:
+        - Google OAuth
+      summary: Refresh JWT token
+      description: Refresh the JWT token for continued authentication
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                status: "success"
+                message: "Token refreshed successfully"
+        '401':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Failed to refresh token"
+
+  /api/user:
+    get:
+      tags:
+        - User Management
+      summary: Get user profile
+      description: Retrieve current user's profile information
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+              example:
+                status: "statusOk"
+                message: "users data for user@example.com"
+                data:
+                  id: 1
+                  email: "user@example.com"
+                  name: "John Doe"
+                  avatar: "https://example.com/avatar.jpg"
+                  isVerified: false
+                  role: "user"
+                  createdAt: "2024-01-01T00:00:00.000Z"
+                  updatedAt: "2024-01-01T00:00:00.000Z"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "invalid token"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "error while getting user data"
+
+    put:
+      tags:
+        - User Management
+      summary: Update user profile
+      description: Update current user's profile information
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+            example:
+              name: "Jane Doe"
+              avatar: "https://example.com/new-avatar.jpg"
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                status: "statusOk"
+                message: "successfully updated user profile"
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "invalid input"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "invalid token"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "something went wrong"
+
+    delete:
+      tags:
+        - User Management
+      summary: Delete user account
+      description: Permanently delete the current user's account
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: User account deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteUserResponse'
+              example:
+                status: "statusOK"
+                message: "user of id 1 deleted successfully"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "unauthorize access"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "something went wrong"
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: JWT token stored in HTTP-only cookie
+    authToken:
+      type: apiKey
+      in: cookie
+      name: auth_token
+      description: JWT token for Google OAuth authentication
+
+  schemas:
+    SignUpRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "user@example.com"
+        password:
+          type: string
+          minLength: 8
+          maxLength: 16
+          description: User's password (8-16 characters)
+          example: "securepassword123"
+        name:
+          type: string
+          description: User's full name
+          example: "John Doe"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "user@example.com"
+        password:
+          type: string
+          minLength: 8
+          maxLength: 16
+          description: User's password
+          example: "securepassword123"
+
+    GoogleAuthRequest:
+      type: object
+      required:
+        - access_token
+      properties:
+        access_token:
+          type: string
+          description: Google OAuth access token
+          example: "ya29.a0AfH6SMC..."
+        id_token:
+          type: string
+          description: Google ID token (optional, for additional security)
+          example: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjE..."
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: User's full name
+          example: "Jane Doe"
+        avatar:
+          type: string
+          format: uri
+          description: URL to user's avatar image
+          example: "https://example.com/avatar.jpg"
+
+    AuthSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success, statusOk]
+          description: Response status
+        message:
+          type: string
+          description: Success message
+        cookie:
+          type: string
+          description: JWT token (also set as HTTP-only cookie)
+
+    GoogleAuthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+          description: Response status
+        user:
+          $ref: '#/components/schemas/GoogleUser'
+        message:
+          type: string
+          description: Success message
+
+    GoogleUser:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Google user ID
+          example: "123456789"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "user@gmail.com"
+        name:
+          type: string
+          description: User's full name
+          example: "John Doe"
+        picture:
+          type: string
+          format: uri
+          description: URL to user's profile picture
+          example: "https://lh3.googleusercontent.com/a/..."
+        given_name:
+          type: string
+          description: User's first name
+          example: "John"
+        family_name:
+          type: string
+          description: User's last name
+          example: "Doe"
+        email_verified:
+          type: string
+          description: Whether email is verified
+          example: "true"
+        provider:
+          type: string
+          enum: [google]
+          description: Authentication provider
+          example: "google"
+
+    UserInfoResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+          description: Response status
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              description: User ID
+            email:
+              type: string
+              format: email
+              description: User's email address
+
+    UserProfileResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [statusOk]
+          description: Response status
+        message:
+          type: string
+          description: Response message
+        data:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: User ID
+          example: 1
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "user@example.com"
+        name:
+          type: string
+          description: User's full name
+          example: "John Doe"
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          description: URL to user's avatar image
+          example: "https://example.com/avatar.jpg"
+        isVerified:
+          type: boolean
+          description: Whether user's email is verified
+          example: false
+        role:
+          type: string
+          description: User's role
+          example: "user"
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+          example: "2024-01-01T00:00:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2024-01-01T00:00:00.000Z"
+
+    DeleteUserResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [statusOK]
+          description: Response status
+        message:
+          type: string
+          description: Success message with deleted user ID
+
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success, statusOk, statusOK]
+          description: Response status
+        message:
+          type: string
+          description: Success message
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+          description: Response status
+        message:
+          type: string
+          description: Error message
+
+security:
+  - cookieAuth: [] 
