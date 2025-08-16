@@ -9,7 +9,8 @@ import { limitMiddleWare } from "./middleware/RateLimiter";
 const port = parseInt(process.env.PORT!) || 3000;
 const app = express();
 
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
+app.options('*', cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 app.use(limitMiddleWare)
